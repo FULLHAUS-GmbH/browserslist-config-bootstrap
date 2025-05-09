@@ -1,0 +1,45 @@
+name: 📦 Update & Publish Browserslist Config
+
+on:
+  schedule:
+    - cron: '0 * * * *' # every hour
+  workflow_dispatch: # manual trigger
+
+jobs:
+  update-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Fetch Bootstrap .browserslistrc
+        run: |
+          curl -sL https://raw.githubusercontent.com/twbs/bootstrap/main/.browserslistrc \
+            -o .browserslistrc.new
+          mv .browserslistrc.new .browserslistrc
+
+      - name: Check for changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "No updates to .browserslistrc – exiting."
+            exit 0
+          fi
+
+      - name: Commit & Version bump
+        run: |
+          git add .browserslistrc
+          npm version patch --no-git-tag-version
+          git commit -m "chore: update .browserslistrc to Bootstrap $(date +'%Y-%m-%d')"
+          git tag v$(node -p "require('./package.json').version")
+          git push origin HEAD:main --follow-tags
+
+      - name: Setup Node.js & Publish
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

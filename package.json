@@ -1,0 +1,17 @@
+{
+  "name": "browserslist-config-bootstrap",
+  "version": "1.0.0",
+  "description": "Shareable Browserslist config mirroring Bootstrap’s defaults",
+  "files": [
+    ".browserslistrc"
+  ],
+  "keywords": [
+    "browserslist",
+    "shareable-config",
+    "bootstrap"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
