@@ -1,40 +1,49 @@
-name: 📦 Update & Publish Browserslist Config
+name: 📦 Update, Build & Publish (ESM)
 
 on:
   schedule:
-    - cron: '0 * * * *' # every hour
-  workflow_dispatch: # manual trigger
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
-  update-and-publish:
+  update-build-publish:
     runs-on: ubuntu-latest
 
     steps:
+      # 1) Checkout code
       - uses: actions/checkout@v3
 
+      # 2) Fetch latest .browserslistrc
       - name: Fetch Bootstrap .browserslistrc
         run: |
           curl -sL https://raw.githubusercontent.com/twbs/bootstrap/main/.browserslistrc \
             -o .browserslistrc.new
           mv .browserslistrc.new .browserslistrc
 
+      # 3) Exit if unchanged
       - name: Check for changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if git diff --quiet; then
-            echo "No updates to .browserslistrc – exiting."
+            echo "No update → exiting"
             exit 0
           fi
 
-      - name: Commit & Version bump
+      # 4) Build ESM module
+      - name: Build index.js (ESM)
+        run: npm run build
+
+      # 5) Commit & bump
+      - name: Commit & Tag
         run: |
-          git add .browserslistrc
+          git add .browserslistrc index.js
           npm version patch --no-git-tag-version
-          git commit -m "chore: update .browserslistrc to Bootstrap $(date +'%Y-%m-%d')"
+          git commit -m "chore: update .browserslistrc → index.js ($(date +'%Y-%m-%d'))"
           git tag v$(node -p "require('./package.json').version")
           git push origin HEAD:main --follow-tags
 
+      # 6) Publish
       - name: Setup Node.js & Publish
         uses: actions/setup-node@v3
         with:

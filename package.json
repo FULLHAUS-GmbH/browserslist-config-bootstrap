@@ -1,9 +1,11 @@
 {
   "name": "browserslist-config-bootstrap",
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "type": "module",
   "description": "Shareable Browserslist config mirroring Bootstrap’s defaults",
+  "main": "index.cjs",
   "files": [
-    ".browserslistrc"
+    "index.cjs"
   ],
   "keywords": [
     "browserslist",
@@ -13,5 +15,8 @@
   "license": "MIT",
   "publishConfig": {
     "access": "public"
+  },
+  "scripts": {
+    "build": "node scripts/build.cjs"
   }
 }
