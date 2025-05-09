@@ -31,15 +31,15 @@ jobs:
           fi
 
       # 4) Build ESM module
-      - name: Build index.js (ESM)
+      - name: Build index.cjs (ESM)
         run: npm run build
 
       # 5) Commit & bump
       - name: Commit & Tag
         run: |
-          git add .browserslistrc index.js
+          git add .browserslistrc index.cjs
           npm version patch --no-git-tag-version
-          git commit -m "chore: update .browserslistrc → index.js ($(date +'%Y-%m-%d'))"
+          git commit -m "chore: update .browserslistrc → index.cjs ($(date +'%Y-%m-%d'))"
           git tag v$(node -p "require('./package.json').version")
           git push origin HEAD:main --follow-tags
 
