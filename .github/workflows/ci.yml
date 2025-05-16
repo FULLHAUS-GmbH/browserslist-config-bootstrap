@@ -6,35 +6,46 @@ on:
   workflow_dispatch:
 
 jobs:
-  update-build-publish:
+  check-for-changes:
     runs-on: ubuntu-latest
-
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
     steps:
-      # 1) Checkout code
       - uses: actions/checkout@v4
 
-      # 2) Fetch latest .browserslistrc
       - name: Fetch Bootstrap .browserslistrc
         run: |
           curl -sL https://raw.githubusercontent.com/twbs/bootstrap/main/.browserslistrc \
             -o .browserslistrc.new
           mv .browserslistrc.new .browserslistrc
 
-      # 3) Exit if unchanged
       - name: Check for changes
+        id: check
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if git diff --quiet; then
-            echo "No update → exiting"
-            exit 0
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
-      # 4) Build ESM module
+  update-build-publish:
+    needs: check-for-changes
+    if: needs.check-for-changes.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch Bootstrap .browserslistrc
+        run: |
+          curl -sL https://raw.githubusercontent.com/twbs/bootstrap/main/.browserslistrc \
+            -o .browserslistrc.new
+          mv .browserslistrc.new .browserslistrc
+
       - name: Build index.cjs (ESM)
         run: npm run build
 
-      # 5) Commit & bump
       - name: Commit & Tag
         run: |
           git add .browserslistrc index.cjs
@@ -43,7 +54,6 @@ jobs:
           git tag v$(node -p "require('./package.json').version")
           git push origin HEAD:main --follow-tags
 
-      # 6) Publish
       - name: Setup Node.js & Publish
         uses: actions/setup-node@v3
         with:
