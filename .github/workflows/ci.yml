@@ -5,22 +5,33 @@ on:
     - cron: '0 * * * *'
   workflow_dispatch:
 
+concurrency:
+  group: update-build-publish-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
 jobs:
-  check-for-changes:
+  check:
     runs-on: ubuntu-latest
     outputs:
-      changed: ${{ steps.check.outputs.changed }}
+      changed: ${{ steps.diff.outputs.changed }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Fetch Bootstrap .browserslistrc
+      - name: Update .browserslistrc
         run: |
           curl -sL https://raw.githubusercontent.com/twbs/bootstrap/main/.browserslistrc \
-            -o .browserslistrc.new
-          mv .browserslistrc.new .browserslistrc
+            -o .browserslistrc
 
       - name: Check for changes
-        id: check
+        id: diff
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -30,35 +41,46 @@ jobs:
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
-  update-build-publish:
-    needs: check-for-changes
-    if: needs.check-for-changes.outputs.changed == 'true'
+  build-and-publish:
+    needs: check
+    if: needs.check.outputs.changed == 'true'
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Fetch Bootstrap .browserslistrc
-        run: |
-          curl -sL https://raw.githubusercontent.com/twbs/bootstrap/main/.browserslistrc \
-            -o .browserslistrc.new
-          mv .browserslistrc.new .browserslistrc
-
-      - name: Build index.cjs (ESM)
-        run: npm run build
-
-      - name: Commit & Tag
-        run: |
-          git add .browserslistrc index.cjs
-          npm version patch --no-git-tag-version
-          git commit -m "chore: update .browserslistrc → index.cjs ($(date +'%Y-%m-%d'))"
-          git tag v$(node -p "require('./package.json').version")
-          git push origin HEAD:main --follow-tags
-
-      - name: Setup Node.js & Publish
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
-      - run: npm publish
+
+      - name: Update .browserslistrc
+        run: |
+          curl -sL https://raw.githubusercontent.com/twbs/bootstrap/main/.browserslistrc \
+            -o .browserslistrc
+
+      - name: Build (ESM)
+        run: npm run build
+
+      - name: Bump version, commit & tag
+        env:
+          TZ: Europe/Berlin
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          npm version patch --no-git-tag-version
+          git add .browserslistrc index.cjs package.json package-lock.json
+          git commit -m "chore(release): v$(node -p "require('./package.json').version") [skip ci]"
+          git tag v$(node -p "require('./package.json').version")
+          git push origin HEAD:main --follow-tags
+
+      - name: Publish to npm
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
