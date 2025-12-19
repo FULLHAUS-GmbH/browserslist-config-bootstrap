@@ -4,6 +4,9 @@
   "type": "module",
   "description": "Shareable Browserslist config mirroring Bootstrap’s defaults",
   "main": "index.cjs",
+  "repository": {
+    "url": "https://github.com/FULLHAUS-GmbH/browserslist-config-bootstrap"
+  },
   "module": "index.mjs",
   "exports": {
     ".": {
