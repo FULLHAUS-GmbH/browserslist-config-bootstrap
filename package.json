@@ -1,6 +1,6 @@
 {
   "name": "browserslist-config-bootstrap",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "description": "Shareable Browserslist config mirroring Bootstrap’s defaults",
   "main": "index.cjs",
